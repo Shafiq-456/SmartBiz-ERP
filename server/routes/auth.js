@@ -6,6 +6,40 @@ const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
+// POST /api/auth/register
+router.post('/register', (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Name, email, and password are required' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    if (existing) {
+      return res.status(400).json({ error: 'Email already registered' });
+    }
+
+    const hashed = bcrypt.hashSync(password, 10);
+    const result = db.prepare(
+      'INSERT INTO users (name, email, password, role, has_seen_welcome) VALUES (?, ?, ?, ?, ?)'
+    ).run(name, email, hashed, 'Admin', 0);
+
+    const user = db.prepare('SELECT id, name, email, role, has_seen_welcome FROM users WHERE id = ?').get(result.lastInsertRowid);
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role, name: user.name },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.status(201).json({ token, user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/auth/login
 router.post('/login', (req, res) => {
   try {
@@ -32,8 +66,18 @@ router.post('/login', (req, res) => {
 
     res.json({
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role, avatar: user.avatar }
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, avatar: user.avatar, has_seen_welcome: user.has_seen_welcome }
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/auth/welcome-seen
+router.put('/welcome-seen', authenticateToken, (req, res) => {
+  try {
+    db.prepare('UPDATE users SET has_seen_welcome = 1 WHERE id = ?').run(req.user.id);
+    res.json({ message: 'Welcome screen dismissed' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -42,7 +86,7 @@ router.post('/login', (req, res) => {
 // GET /api/auth/profile
 router.get('/profile', authenticateToken, (req, res) => {
   try {
-    const user = db.prepare('SELECT id, name, email, role, avatar, created_at FROM users WHERE id = ?').get(req.user.id);
+    const user = db.prepare('SELECT id, name, email, role, avatar, has_seen_welcome, created_at FROM users WHERE id = ?').get(req.user.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json(user);
   } catch (err) {
@@ -55,7 +99,7 @@ router.put('/profile', authenticateToken, (req, res) => {
   try {
     const { name, email } = req.body;
     db.prepare('UPDATE users SET name = ?, email = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(name, email, req.user.id);
-    const user = db.prepare('SELECT id, name, email, role, avatar FROM users WHERE id = ?').get(req.user.id);
+    const user = db.prepare('SELECT id, name, email, role, avatar, has_seen_welcome FROM users WHERE id = ?').get(req.user.id);
     res.json({ message: 'Profile updated successfully', user });
   } catch (err) {
     res.status(500).json({ error: err.message });

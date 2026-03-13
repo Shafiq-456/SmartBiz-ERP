@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useState, useEffect, createContext, useCallback } from 'react';
 import Layout from './components/Layout';
 import Login from './pages/Login';
+import Register from './pages/Register';
+import Welcome from './pages/Welcome';
 import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
 import Orders from './pages/Orders';
@@ -65,11 +67,17 @@ function App() {
   };
 
   return (
-    <AppContext.Provider value={{ user, darkMode, setDarkMode, addToast, login, logout }}>
+    <AppContext.Provider value={{ user, setUser, darkMode, setDarkMode, addToast, login, logout }}>
       <Router>
         <Routes>
           <Route path="/login" element={
-            user ? <Navigate to="/" /> : <Login />
+            user ? (user.has_seen_welcome === 0 ? <Navigate to="/welcome" /> : <Navigate to="/" />) : <Login />
+          } />
+          <Route path="/register" element={
+            user ? <Navigate to="/" /> : <Register />
+          } />
+          <Route path="/welcome" element={
+            <ProtectedRoute><Welcome /></ProtectedRoute>
           } />
           <Route path="/" element={
             <ProtectedRoute><Layout /></ProtectedRoute>

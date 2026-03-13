@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../App';
 import { Plus, Pencil, Trash2, Search, X, Calendar, DollarSign, ClipboardCheck } from 'lucide-react';
+import EmptyState from '../components/EmptyState';
 import api from '../api';
 
 const emptyEmployee = { name: '', email: '', phone: '', department: '', position: '', salary: '', hire_date: '', status: 'Active' };
@@ -109,6 +110,17 @@ export default function Employees() {
           <Plus className="w-4 h-4" /> Add Employee
         </button>
       </div>
+
+      {employees.length === 0 ? (
+        <EmptyState
+          type="employees"
+          title="No employees yet"
+          message="Add your first employee to start managing your team. Track attendance, departments, and payroll."
+          actionLabel="Add First Employee"
+          onAction={() => { setEditing(null); setForm(emptyEmployee); setShowModal(true); }}
+        />
+      ) : (
+      <>
 
       {/* Tabs */}
       <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit">
@@ -226,6 +238,8 @@ export default function Employees() {
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
 
       {/* Add/Edit Modal */}

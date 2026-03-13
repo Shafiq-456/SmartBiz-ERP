@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../App';
 import { Plus, Eye, Search, X, ShoppingCart, ChevronDown } from 'lucide-react';
+import EmptyState from '../components/EmptyState';
 import api from '../api';
 
 export default function Orders() {
@@ -108,6 +109,17 @@ export default function Orders() {
         </button>
       </div>
 
+      {orders.length === 0 ? (
+        <EmptyState
+          type="orders"
+          title="No orders yet"
+          message="Create your first order to start tracking sales. You'll need to add products and customers first."
+          actionLabel="Create First Order"
+          onAction={() => setShowCreate(true)}
+        />
+      ) : (
+      <>
+
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -165,6 +177,8 @@ export default function Orders() {
           </table>
         </div>
       </div>
+      </>
+      )}
 
       {/* Create Order Modal */}
       {showCreate && (

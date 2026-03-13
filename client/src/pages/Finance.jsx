@@ -2,6 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../App';
 import { Plus, Trash2, Search, X, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import EmptyState from '../components/EmptyState';
 import api from '../api';
 
 const emptyTxn = { type: 'Income', category: '', amount: '', description: '', date: '', reference: '' };
@@ -86,6 +87,17 @@ export default function Finance() {
           <Plus className="w-4 h-4" /> Add Transaction
         </button>
       </div>
+
+      {transactions.length === 0 ? (
+        <EmptyState
+          type="finance"
+          title="No transactions yet"
+          message="Add your first income or expense to start tracking your finances. Monitor profit, loss, and cash flow."
+          actionLabel="Add First Transaction"
+          onAction={() => { setForm(emptyTxn); setShowModal(true); }}
+        />
+      ) : (
+      <>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -208,6 +220,8 @@ export default function Finance() {
           </table>
         </div>
       </div>
+      </>
+      )}
 
       {/* Add Transaction Modal */}
       {showModal && (

@@ -11,8 +11,9 @@ router.get('/', authenticateToken, (req, res) => {
       SELECT o.*, c.name as customer_name 
       FROM orders o 
       JOIN customers c ON o.customer_id = c.id 
+      WHERE o.user_id = ?
       ORDER BY o.created_at DESC
-    `).all();
+    `).all(req.user.id);
     res.json(orders);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -26,8 +27,8 @@ router.get('/:id', authenticateToken, (req, res) => {
       SELECT o.*, c.name as customer_name 
       FROM orders o 
       JOIN customers c ON o.customer_id = c.id 
-      WHERE o.id = ?
-    `).get(req.params.id);
+      WHERE o.id = ? AND o.user_id = ?
+    `).get(req.params.id, req.user.id);
     if (!order) return res.status(404).json({ error: 'Order not found' });
 
     const items = db.prepare(`
@@ -52,10 +53,14 @@ router.post('/', authenticateToken, (req, res) => {
       return res.status(400).json({ error: 'Order must have at least one item' });
     }
 
+    // Validate customer belongs to this user
+    const customer = db.prepare('SELECT id FROM customers WHERE id = ? AND user_id = ?').get(customer_id, req.user.id);
+    if (!customer) return res.status(400).json({ error: 'Customer not found' });
+
     // Calculate total and validate stock
     let total = 0;
     for (const item of items) {
-      const product = db.prepare('SELECT * FROM products WHERE id = ?').get(item.product_id);
+      const product = db.prepare('SELECT * FROM products WHERE id = ? AND user_id = ?').get(item.product_id, req.user.id);
       if (!product) return res.status(400).json({ error: `Product ${item.product_id} not found` });
       if (product.stock < item.quantity) {
         return res.status(400).json({ error: `Insufficient stock for ${product.name}. Available: ${product.stock}` });
@@ -66,24 +71,24 @@ router.post('/', authenticateToken, (req, res) => {
 
     // Create order
     const result = db.prepare(
-      'INSERT INTO orders (customer_id, total, notes) VALUES (?, ?, ?)'
-    ).run(customer_id, total, notes || '');
+      'INSERT INTO orders (user_id, customer_id, total, notes) VALUES (?, ?, ?, ?)'
+    ).run(req.user.id, customer_id, total, notes || '');
 
     const orderId = result.lastInsertRowid;
 
     // Insert items and reduce stock
     const insertItem = db.prepare('INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (?, ?, ?, ?)');
-    const updateStock = db.prepare('UPDATE products SET stock = stock - ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?');
+    const updateStock = db.prepare('UPDATE products SET stock = stock - ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?');
 
     for (const item of items) {
       insertItem.run(orderId, item.product_id, item.quantity, item.price);
-      updateStock.run(item.quantity, item.product_id);
+      updateStock.run(item.quantity, item.product_id, req.user.id);
     }
 
     // Update customer stats
     db.prepare(
-      'UPDATE customers SET total_orders = total_orders + 1, total_spent = total_spent + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-    ).run(total, customer_id);
+      'UPDATE customers SET total_orders = total_orders + 1, total_spent = total_spent + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?'
+    ).run(total, customer_id, req.user.id);
 
     const order = db.prepare(`
       SELECT o.*, c.name as customer_name 
@@ -106,12 +111,12 @@ router.post('/', authenticateToken, (req, res) => {
 router.put('/:id/status', authenticateToken, (req, res) => {
   try {
     const { status } = req.body;
-    db.prepare('UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(status, req.params.id);
+    db.prepare('UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?').run(status, req.params.id, req.user.id);
     const order = db.prepare(`
       SELECT o.*, c.name as customer_name 
       FROM orders o JOIN customers c ON o.customer_id = c.id 
-      WHERE o.id = ?
-    `).get(req.params.id);
+      WHERE o.id = ? AND o.user_id = ?
+    `).get(req.params.id, req.user.id);
     res.json(order);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -121,7 +126,7 @@ router.put('/:id/status', authenticateToken, (req, res) => {
 // DELETE /api/orders/:id
 router.delete('/:id', authenticateToken, (req, res) => {
   try {
-    db.prepare('DELETE FROM orders WHERE id = ?').run(req.params.id);
+    db.prepare('DELETE FROM orders WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
     res.json({ message: 'Order deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -1,5 +1,5 @@
 import { useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { AppContext } from '../App';
 import { Boxes, Eye, EyeOff } from 'lucide-react';
 import api from '../api';
@@ -19,7 +19,11 @@ export default function Login() {
       const { data } = await api.post('/auth/login', { email, password });
       login(data.user, data.token);
       addToast('Welcome back! Login successful', 'success');
-      navigate('/');
+      if (data.user.has_seen_welcome === 0) {
+        navigate('/welcome');
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       addToast(err.response?.data?.error || 'Login failed', 'error');
     } finally {
@@ -106,6 +110,11 @@ export default function Login() {
               Demo: <span className="text-primary-400 font-medium">admin@smartbiz.com</span> / <span className="text-primary-400 font-medium">Admin@123</span>
             </p>
           </div>
+
+          <p className="text-center text-slate-400 text-sm mt-4">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-primary-400 hover:text-primary-300 font-medium">Create Account</Link>
+          </p>
         </div>
       </div>
     </div>

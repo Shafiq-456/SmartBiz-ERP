@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../App';
 import { Plus, Pencil, Trash2, Search, AlertTriangle, X, Package } from 'lucide-react';
+import EmptyState from '../components/EmptyState';
 import api from '../api';
 
 const emptyProduct = { name: '', sku: '', category: '', price: '', cost: '', stock: '', low_stock_threshold: '10', description: '' };
@@ -114,6 +115,17 @@ export default function Inventory() {
         </button>
       </div>
 
+      {products.length === 0 ? (
+        <EmptyState
+          type="products"
+          title="No products yet"
+          message="Add your first product to start building your inventory. Track stock levels, prices, and categories."
+          actionLabel="Add First Product"
+          onAction={openAdd}
+        />
+      ) : (
+      <>
+
       {/* Low Stock Banner */}
       {lowStockCount > 0 && (
         <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl">
@@ -200,6 +212,8 @@ export default function Inventory() {
           </table>
         </div>
       </div>
+      </>
+      )}
 
       {/* Add/Edit Modal */}
       {showModal && (

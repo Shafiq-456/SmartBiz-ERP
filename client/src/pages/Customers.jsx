@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../App';
 import { Plus, Pencil, Trash2, Search, X, Users, Mail, Phone, MapPin } from 'lucide-react';
+import EmptyState from '../components/EmptyState';
 import api from '../api';
 
 const emptyCustomer = { name: '', email: '', phone: '', address: '', segment: 'New' };
@@ -92,6 +93,17 @@ export default function Customers() {
         </button>
       </div>
 
+      {customers.length === 0 ? (
+        <EmptyState
+          type="customers"
+          title="No customers yet"
+          message="Add your first customer to start building your client base. Track orders, spending, and segment your customers."
+          actionLabel="Add First Customer"
+          onAction={() => { setEditing(null); setForm(emptyCustomer); setShowModal(true); }}
+        />
+      ) : (
+      <>
+
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -157,6 +169,8 @@ export default function Customers() {
           <div className="col-span-full text-center py-12 text-slate-500 dark:text-slate-400">No customers found</div>
         )}
       </div>
+      </>
+      )}
 
       {/* Add/Edit Modal */}
       {showModal && (
