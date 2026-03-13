@@ -4,7 +4,7 @@ const cors = require('cors');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Middleware
 app.use(cors());
@@ -33,7 +33,12 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'SmartBiz ERP API is running' });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 SmartBiz ERP Server running on http://localhost:${PORT}`);
-});
+// Export app for Vercel serverless
+module.exports = app;
+
+// Start server only when running locally (not on Vercel)
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`🚀 SmartBiz ERP Server running on http://localhost:${PORT}`);
+  });
+}
