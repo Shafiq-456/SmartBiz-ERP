@@ -81,7 +81,7 @@ npm run dev
 
 ### 5. Open in browser
 
-Visit **http://localhost:3000**
+Visit https://smart-biz-erp.vercel.app/login
 
 ---
 
